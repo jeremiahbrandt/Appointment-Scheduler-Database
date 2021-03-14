@@ -5,7 +5,7 @@ DROP PROCEDURE Get_Professional_Appointments;
 
 -- Delete existing database
 DROP TABLE Appointment;
-DROP TABLE ClientFavorite;
+DROP TABLE ClientFavoriteProfessional;
 DROP TABLE Client;
 DROP TABLE TimeSlot;
 DROP TABLE Professional;
@@ -59,12 +59,12 @@ CREATE TABLE Client
 	CONSTRAINT FK_Client_AccountId FOREIGN KEY(AccountId) REFERENCES Account(AccountId)
 );
 
-CREATE TABLE ClientFavorite
+CREATE TABLE ClientFavoriteProfessional
 (
 	ClientId int,
 	ProfessionalId int,
-	CONSTRAINT FK_ClientFavorites_ClientId FOREIGN KEY(ClientId) REFERENCES Client(ClientId),
-	CONSTRAINT FK_ClientFavorites_ProfessionalId FOREIGN KEY(ProfessionalId) REFERENCES Professional(ProfessionalId)
+	CONSTRAINT FK_ClientFavoriteProfessional_ClientId FOREIGN KEY(ClientId) REFERENCES Client(ClientId),
+	CONSTRAINT FK_ClientFavoriteProfessional_ProfessionalId FOREIGN KEY(ProfessionalId) REFERENCES Professional(ProfessionalId)
 ); 
 
 CREATE TABLE Appointment
@@ -118,3 +118,12 @@ GO
 
 -- Client stored procedures
 -- Populate tables
+
+-- Test to make sure the tables were created
+SELECT * FROM Account;
+SELECT * FROM Professional;
+SELECT * FROM ProfessionalAddress;
+SELECT * FROM TimeSlot;
+SELECT * FROM Client;
+SELECT * FROM ClientFavoriteProfessional;
+SELECT * FROM Appointment;
