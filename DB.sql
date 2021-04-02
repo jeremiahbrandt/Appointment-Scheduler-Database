@@ -31,13 +31,28 @@ END
 GO
 
 -- Delete existing stored procedures
-DROP PROCEDURE Get_Professional;
-DROP PROCEDURE Get_Professional_TimeSlots;
-DROP PROCEDURE Get_Professional_Appointments;
-DROP PROCEDURE Create_Professional;
-DROP PROCEDURE Get_Client_Favorites;
-DROP PROCEDURE Get_Client_Appointments;
-DROP PROCEDURE Create_Client;
+DROP PROC AddProfessional;
+DROP PROC GetProfessional;
+DROP PROC GetProfessionalTimeSlots;
+DROP PROC GetProfessionalAppointments;
+DROP PROC RemoveProfessional;
+DROP PROC UpdateProfessional;
+
+DROP PROC AddClient;
+DROP PROC AddClientFavorite;
+DROP PROC GetClient;
+DROP PROC GetClientFavorites;
+DROP PROC GetClientAppointments;
+DROP PROC UpdateClient;
+DROP PROC RemoveClient;
+DROP PROC RemoveClientFavorite;
+
+DROP PROC AddTimeSlot;
+DROP PROC RemoveTimeSlot;
+
+DROP PROC AddAppointment;
+DROP PROC RemoveAppointment;
+DROP PROC UpdateAppointment;
 
 -- Delete existing database
 DROP TABLE Appointment;
@@ -45,205 +60,289 @@ DROP TABLE ClientFavoriteProfessional;
 DROP TABLE Client;
 DROP TABLE TimeSlot;
 DROP TABLE Professional;
-DROP TABLE ProfessionalAddress;
 
 -- Create tables
-CREATE TABLE ProfessionalAddress
-(
-	ProfessionalAddressId int Identity(1, 1) NOT NULL,
-	StreetNumber int, 
-	StreetName NVARCHAR(255), 
-	City NVARCHAR(255), 
-	StateName NVARCHAR(255), 
-	ZipCode NVARCHAR(255),
-	CONSTRAINT PK_Address PRIMARY KEY(ProfessionalAddressId)
-);
 CREATE TABLE Professional
 (
-	ProfessionalUid NVARCHAR(255) NOT NULL, 
-	ProfessionalAddressId int,
-	Occupation NVARCHAR(255),
-	ShareableCode NVARCHAR(255),
-	CONSTRAINT PK_Professional PRIMARY KEY(ProfessionalUid),
-	CONSTRAINT FK_AddressId FOREIGN KEY(ProfessionalAddressId) REFERENCES ProfessionalAddress(ProfessionalAddressId)
+	FirebaseUid NVARCHAR(255) NOT NULL, 
+	FirstName NVARCHAR(255) NOT NULL,
+	LastName NVARCHAR(255) NOT NULL,
+	Occupation NVARCHAR(255) NOT NULL,
+	ShareableCode NVARCHAR(255) NOT NULL,
+	StreetNumber INT NOT NULL, 
+	StreetName NVARCHAR(255) NOT NULL, 
+	City NVARCHAR(255) NOT NULL, 
+	StateName NVARCHAR(255) NOT NULL, 
+	ZipCode INT NOT NULL,
+	CONSTRAINT PK_Professional PRIMARY KEY(FirebaseUid)
 );
 
 CREATE TABLE TimeSlot
 (
-	TimeSlotId int Identity(1, 1) NOT NULL, 
-	ProfessionalUid NVARCHAR(255),
-	StartTime DateTime2,
-	EndTime DateTime2,
+	TimeSlotId INT Identity(1, 1) NOT NULL, 
+	ProfessionalId NVARCHAR(255) NOT NULL,
+	StartTime DateTime2 NOT NULL,
+	EndTime DateTime2 NOT NULL,
 	CONSTRAINT PK_TimeSlot PRIMARY KEY(TimeSlotId),
-	CONSTRAINT FK_ProfessionalId FOREIGN KEY(ProfessionalUid) REFERENCES Professional(ProfessionalUid)
+	CONSTRAINT FK_ProfessionalId FOREIGN KEY(ProfessionalId) REFERENCES Professional(FirebaseUid)
 );
+
 CREATE TABLE Client
 (
-	ClientUid  NVARCHAR(255) NOT NULL, 
-	CONSTRAINT PK_Client PRIMARY KEY(ClientUid)
+	FirebaseUid NVARCHAR(255) NOT NULL, 
+	FirstName NVARCHAR(255) NOT NULL,
+	LastName NVARCHAR(255) NOT NULL,
+	CONSTRAINT PK_Client PRIMARY KEY(FirebaseUid)
 );
 
 CREATE TABLE ClientFavoriteProfessional
 (
-	ClientUid NVARCHAR(255),
-	ProfessionalUid NVARCHAR(255),
-	CONSTRAINT FK_ClientFavoriteProfessional_ClientId FOREIGN KEY(ClientUid) REFERENCES Client(ClientUid),
-	CONSTRAINT FK_ClientFavoriteProfessional_ProfessionalId FOREIGN KEY(ProfessionalUid) REFERENCES Professional(ProfessionalUid)
+	ClientUid NVARCHAR(255) NOT NULL,
+	ProfessionalUid NVARCHAR(255) NOT NULL,
+	CONSTRAINT FK_ClientFavoriteProfessional_ClientId FOREIGN KEY(ClientUid) REFERENCES Client(FirebaseUid),
+	CONSTRAINT FK_ClientFavoriteProfessional_ProfessionalId FOREIGN KEY(ProfessionalUid) REFERENCES Professional(FirebaseUid)
 ); 
 
 CREATE TABLE Appointment
 (
-	AppointmentId int Identity(1, 1) NOT NULL,
-	ClientUid NVARCHAR(255),
-	ProfessionalUid NVARCHAR(255),
-	TimeSlotId int,
-	AppointmentName NVARCHAR(255),
-	AppointmentDescription NVARCHAR(255),
-	AppointmentLocation NVARCHAR(255),
-	CONSTRAINT PK_Appointment PRIMARY KEY(AppointmentId),
-	CONSTRAINT FK_Appointment_ClientId FOREIGN KEY(ClientUid) REFERENCES Client(ClientUid),
-	CONSTRAINT FK_Appointment_ProfessionalId FOREIGN KEY(ProfessionalUid) REFERENCES Professional(ProfessionalUid),
+	ClientId NVARCHAR(255) NOT NULL,
+	TimeSlotId INT NOT NULL,
+	AppointmentName NVARCHAR(255) NOT NULL,
+	AppointmentDescription NVARCHAR(255) NOT NULL,
+	CONSTRAINT FK_Appointment_ClientId FOREIGN KEY(ClientId) REFERENCES Client(FirebaseUid),
 	CONSTRAINT FK_Appointment_TimeSlotId FOREIGN KEY(TimeSlotId) REFERENCES TimeSlot(TimeSlotId),
 ); 
 GO
 
 -- Create stored procedures
--- Professional stored procedures
-CREATE PROC Get_Professional @Uid NVARCHAR(255)
+/*
+Professional stored procedures
+	AddProfessional
+	GetProfessional
+	GetProfessionalTimeSlots
+	GetProfessionalAppointments
+	RemoveProfessional
+	UpdateProfessional
+*/
+
+CREATE PROC AddProfessional @FirebaseUid NVARCHAR(255), @FirstName NVARCHAR(255), @LastName NVARCHAR(255), @Occupation NVARCHAR(255), @StreetNumber INT, @StreetName NVARCHAR(255), @State NVARCHAR(255), @City NVARCHAR(255), @ZipCode INT
 AS
-SELECT Occupation, StreetNumber, StreetName, City, StateName, ZipCode
-FROM Professional JOIN ProfessionalAddress ON (Professional.ProfessionalAddressId = ProfessionalAddress.ProfessionalAddressId)
-WHERE Professional.ProfessionalUid = @Uid;
+	INSERT INTO Professional(FirebaseUid, FirstName, LastName, Occupation, ShareableCode, StreetNumber, StreetName, City, StateName, ZipCode) 
+		VALUES(@FirebaseUid, @FirstName, @LastName, @Occupation, dbo.GenPass(), @StreetNumber, @StreetName, @State, @City, @ZipCode);
 GO
 
-CREATE PROC Get_Professional_TimeSlots @Uid NVARCHAR(255)
+CREATE PROC GetProfessional @FirebaseUid NVARCHAR(255)
 AS
-SELECT StartTime, EndTime 
-FROM Professional JOIN TimeSlot ON(Professional.ProfessionalUid = TimeSlot.ProfessionalUid)
-WHERE Professional.ProfessionalUid = @Uid;
+	SELECT FirebaseUid, FirstName, LastName, Occupation, ShareableCode, StreetNumber, StreetName, City, StateName AS State, ZipCode
+	FROM Professional
+	WHERE @FirebaseUid = FirebaseUid;
 GO
 
-CREATE PROC Get_Professional_Appointments @Uid NVARCHAR(255)
+CREATE PROC GetProfessionalTimeSlots @FirebaseUid NVARCHAR(255)
 AS
-SELECT AppointmentName AS Name, AppointmentDescription AS Description, AppointmentLocation AS Location, StartTime, EndTime, ClientUid
-FROM Professional JOIN TimeSlot ON(Professional.ProfessionalUid = TimeSlot.ProfessionalUid) JOIN Appointment ON(Professional.ProfessionalUid = Appointment.AppointmentId)
-WHERE Professional.ProfessionalUid = @Uid;
+	SELECT FirebaseUid, TimeSlotId, StartTime, EndTime
+	FROM Professional JOIN TimeSlot ON(FirebaseUid = ProfessionalId)
+	WHERE @FirebaseUid = FirebaseUid;
 GO
 
-CREATE PROC Create_Professional @Uid NVARCHAR(255), @Occupation NVARCHAR(255), @StreetNumber INT, @StreetName NVARCHAR(255), @State NVARCHAR(255), @City NVARCHAR(255), @ZipCode INT
+CREATE PROC GetProfessionalAppointments @FirebaseUid NVARCHAR(255)
 AS
-INSERT INTO ProfessionalAddress VALUES(@StreetNumber, @StreetName, @State, @City, @ZipCode);
-INSERT INTO Professional VALUES(@Uid, SCOPE_IDENTITY(), @Occupation, dbo.GenPass());
+	SELECT Professional.FirebaseUid AS ProfessionalUid, StartTime, EndTime, AppointmentName, AppointmentDescription, Client.FirebaseUid AS ClientUid, Client.FirstName AS ClientFirstName, Client.LastName AS ClientLastName
+	FROM Professional JOIN TimeSlot ON(FirebaseUid = ProfessionalId) JOIN Appointment ON(TimeSlot.TimeSlotId = Appointment.TimeSlotId) JOIN Client ON(Appointment.ClientId = Client.FirebaseUid)
+	WHERE @FirebaseUid = Professional.FirebaseUid;
 GO
 
--- Client stored procedures
-CREATE PROC Get_Client_Favorites @Uid NVARCHAR(255)
+CREATE PROC RemoveProfessional @FirebaseUid NVARCHAR(255)
 AS
-SELECT Client.ClientUid, Professional.ProfessionalUid, Occupation, StreetNumber as Street, StateName as State, City, StateName as State, ZipCode
-FROM Client JOIN ClientFavoriteProfessional ON(Client.ClientUid = ClientFavoriteProfessional.ClientUid) JOIN Professional ON(ClientFavoriteProfessional.ProfessionalUid = Professional.ProfessionalUid) JOIN ProfessionalAddress ON (Professional.ProfessionalAddressId = ProfessionalAddress.ProfessionalAddressId)
-WHERE Client.ClientUid = @Uid;
+	DELETE FROM Appointment
+	WHERE TimeSlotId = (SELECT Appointment.TimeSlotId FROM Appointment JOIN TimeSlot ON(Appointment.TimeSlotId = TimeSlot.TimeSlotId) JOIN Professional ON(TimeSlot.ProfessionalId = Professional.FirebaseUid) WHERE @FirebaseUid = Professional.FirebaseUid)
+	DELETE FROM TimeSlot
+	WHERE TimeSlotId = (SELECT TimeSlotId FROM TimeSlot JOIN Professional ON(TimeSlot.ProfessionalId = Professional.FirebaseUid) WHERE @FirebaseUid = Professional.FirebaseUid)
+	DELETE FROM Professional
+	WHERE @FirebaseUid = Professional.FirebaseUid;
 GO
 
-CREATE PROC Get_Client_Appointments @Uid NVARCHAR(255)
+CREATE PROC UpdateProfessional @FirebaseUid NVARCHAR(255), @FirstName NVARCHAR(255), @LastName NVARCHAR(255), @Occupation NVARCHAR(255), @StreetNumber INT, @StreetName NVARCHAR(255), @State NVARCHAR(255), @City NVARCHAR(255), @ZipCode INT
 AS
-SELECT *
-FROM Client JOIN Appointment ON(Client.ClientUid = Appointment.ClientUid) JOIN TimeSlot ON(Appointment.TimeSlotId = TimeSlot.TimeSlotId)
-WHERE Client.ClientUid = @Uid;
+	UPDATE Professional 
+	SET FirebaseUid = @FirebaseUid, FirstName = @FirstName, LastName = @LastName, Occupation = @Occupation, StreetNumber = @StreetNumber, StreetName = @StreetName, StateName = @State, City = @City, ZipCode = @ZipCode
+	WHERE @FirebaseUid = Professional.FirebaseUid;
 GO
 
-CREATE PROC Create_Client @Uid NVARCHAR(255)
+/*
+Client stored procedures
+	AddClient
+	AddClientFavorite
+	GetClient
+	GetClientFavorites
+	GetClientAppointments
+	UpdateClient
+	RemoveClient
+	RemoveClientFavorite
+*/
+
+CREATE PROC AddClient @FirebaseUid NVARCHAR(255), @FirstName NVARCHAR(255), @LastName NVARCHAR(255)
 AS
-INSERT INTO Client VALUES(@Uid);
+	INSERT INTO Client(FirebaseUid, FirstName, LastName) 
+	VALUES(@FirebaseUid, @FirstName, @LastName);
+GO
+
+CREATE PROC AddClientFavorite @ClientFirebaseUid NVARCHAR(255),  @ProfessionalFirebaseUid NVARCHAR(255)
+AS
+	INSERT INTO ClientFavoriteProfessional(ClientUid, ProfessionalUid) 
+	VALUES(@ClientFirebaseUid, @ProfessionalFirebaseUid);
+GO
+
+CREATE PROC GetClient @FirebaseUid NVARCHAR(255)
+AS
+	SELECT FirebaseUid, FirstName, LastName
+	FROM Client
+	WHERE @FirebaseUid = FirebaseUid;
+GO
+
+CREATE PROC GetClientFavorites @FirebaseUid NVARCHAR(255) 
+AS
+	SELECT ClientFavoriteProfessional.ProfessionalUid AS ProfessionalFirebaseUid, FirstName, LastName, Occupation, ShareableCode, StreetNumber, StreetName, City, StateName AS State, ZipCode
+	FROM ClientFavoriteProfessional JOIN Professional ON(ClientFavoriteProfessional.ProfessionalUid = Professional.FirebaseUid)
+	WHERE @FirebaseUid = ClientUid;
+GO
+
+CREATE PROC GetClientAppointments @FirebaseUid NVARCHAR(255)
+AS
+	SELECT Appointment.TimeSlotId, Appointment.AppointmentName, Appointment.AppointmentDescription, StartTime, EndTime, Professional.FirstName AS ProfessionalFirstName, Professional.LastName AS ProfessionalLastName, Occupation, ShareableCode, StreetNumber, StreetName, City, StateName AS State, ZipCode
+	FROM Appointment JOIN TimeSlot ON(Appointment.TimeSlotId = TimeSlot.TimeSlotId) JOIN Professional ON(TimeSlot.ProfessionalId = Professional.FirebaseUid)
+	WHERE @FirebaseUid = ClientId;
+GO
+
+CREATE PROC UpdateClient @FirebaseUid NVARCHAR(255), @FirstName NVARCHAR(255), @LastName NVARCHAR(255)
+AS
+	UPDATE Client
+	SET FirebaseUid = @FirebaseUid, FirstName = @FirstName, LastName = @LastName
+	WHERE @FirebaseUid = FirebaseUid;
+GO
+
+CREATE PROC RemoveClient @FirebaseUid NVARCHAR(255)
+AS
+	DELETE FROM Appointment
+	WHERE @FirebaseUid = ClientId;
+	DELETE FROM Client
+	WHERE @FirebaseUid = FirebaseUid;
+GO
+
+CREATE PROC RemoveClientFavorite @ClientFirebaseUid NVARCHAR(255), @ProfessionalFirebaseUid NVARCHAR(255)
+AS
+	DELETE FROM ClientFavoriteProfessional
+	WHERE @ClientFirebaseUid = ClientUid AND @ProfessionalFirebaseUid = ProfessionalUid;
+GO
+
+/*
+TimeSlot stored procedures
+	AddTimeSlot
+	RemoveTimeSlot
+*/
+CREATE PROC AddTimeSlot @ProfessionalFirebaseUid NVARCHAR(255), @StartTime DATETIME2, @EndTime DATETIME2
+AS
+	INSERT INTO TimeSlot(ProfessionalId, StartTime, EndTime)
+		VALUES(@ProfessionalFirebaseUid, @StartTime, @EndTime);
+GO
+
+CREATE PROC RemoveTimeSlot @TimeSlotId NVARCHAR(255)
+AS
+	DELETE FROM TimeSlot
+	WHERE @TimeSlotId = TimeSlotId;
+GO
+
+/*
+Appointment stored procedures
+	AddAppointment
+	RemoveAppointment
+	UpdateAppointment
+*/
+
+CREATE PROC AddAppointment @ClientFirebaseUid NVARCHAR(255), @TimeSlotId NVARCHAR(255),  @Name NVARCHAR(255),  @Description NVARCHAR(255)
+AS
+	INSERT INTO Appointment(ClientId, TimeSlotId, AppointmentName, AppointmentDescription)
+		VALUES(@ClientFirebaseUid, @TimeSlotId, @Name, @Description);
+GO
+
+CREATE PROC RemoveAppointment @TimeSlotId NVARCHAR(255)
+AS
+	DELETE FROM Appointment
+	WHERE @TimeSlotId = TimeSlotId;
+GO
+
+CREATE PROC UpdateAppointment  @TimeSlotId NVARCHAR(255), @Name NVARCHAR(255),  @Description NVARCHAR(255)
+AS
+	UPDATE Appointment
+		SET AppointmentName = @Name, @Description = @Description
+	WHERE @TimeSlotId = TimeSlotId
 GO
 
 -- Populate tables
-EXEC Create_Professional @Uid = 1000, @Occupation = "Farmer", @StreetNumber = 123456, @StreetName = "Highway Z", @State = "MO", @City = "Sedalia", @ZipCode = 65301;
-EXEC Create_Professional @Uid = 1001, @Occupation = "Tesla CEO", @StreetNumber = 3500, @StreetName = "Deer Creek Road", @City = "Palo Alto", @State = "CA", @ZipCode = 94304;
-EXEC Create_Professional @Uid = "jujn29xtzo", @Occupation = "Jeweller", @StreetNumber = 8937, @StreetName = "Livingston Lane", @City = "Tucker", @State ="GA", @ZipCode = 30084;
-EXEC Create_Professional @Uid = "8d5l24znck", @Occupation = "Florist", @StreetNumber = 7581, @StreetName = "South High Point Lane", @City = "Rockville", @State ="MD", @ZipCode = 20850;
-EXEC Create_Professional @Uid = "8gm798lxzc", @Occupation = "Teacher", @StreetNumber = 7825, @StreetName = "Longfellow Road", @City = "Dothan", @State ="AL", @ZipCode = 36301;
-EXEC Create_Professional @Uid = "5qr3vu2mp4", @Occupation = "Jeweller", @StreetNumber = 10, @StreetName = "Country Club Ave.", @City = "Elizabeth", @State ="NJ", @ZipCode = 07202;
-EXEC Create_Professional @Uid = "nfy5d2ac6p", @Occupation = "Baker", @StreetNumber = 9393, @StreetName = "Hall Lane", @City = "Burbank", @State ="IL", @ZipCode = 60459;
-EXEC Create_Professional @Uid = "gnvzug1u5c", @Occupation = "Producer", @StreetNumber = 31, @StreetName = "S. Hickory Dr.", @City = "Simpsonville", @State ="SC", @ZipCode = 29680;
-EXEC Create_Professional @Uid = "pzpo28946w", @Occupation = " Police_Officer", @StreetNumber = 8169, @StreetName = "East St.", @City = "Laurel", @State ="MD", @ZipCode = 20707;
-EXEC Create_Professional @Uid = "fru58ryelj", @Occupation = "Interior_Designer", @StreetNumber = 9, @StreetName = "Williams Drive", @City = "Raleigh", @State ="NC", @ZipCode = 27603;
-EXEC Create_Professional @Uid = "cjx7e9xyr6", @Occupation = "Mechanic", @StreetNumber = 33, @StreetName = "Granite Drive Staten", @City = "Island", @State ="NY", @ZipCode = 10301;
-EXEC Create_Professional @Uid = "8dkfoi9msh", @Occupation = "Manager", @StreetNumber = 9763, @StreetName = "Eagle Street", @City = "Yakima", @State ="WA", @ZipCode = 98908;
-EXEC Create_Professional @Uid = "s25lvulycb", @Occupation = "Composer", @StreetNumber = 9, @StreetName = "Bradford Dr.", @City = "Menasha", @State ="WI", @ZipCode = 54952;
-EXEC Create_Professional @Uid = "dm7fqv4cp5", @Occupation = " Police_Officer", @StreetNumber = 410, @StreetName = "Beaver Dr.", @City = "Addison", @State ="IL", @ZipCode = 60101;
-EXEC Create_Professional @Uid = "77w1yd6p3l", @Occupation = "Scientist", @StreetNumber = 1, @StreetName = "Parkview St.", @City = "Muskegon", @State ="MI", @ZipCode = 49441;
-EXEC Create_Professional @Uid = "4866m40tke", @Occupation = "Interior_Designer", @StreetNumber = 354, @StreetName = "Bay View St. Harrison", @City = "Township", @State ="MI", @ZipCode = 48045;
-EXEC Create_Professional @Uid = "h4qayvgj26", @Occupation = "Medic", @StreetNumber = 62, @StreetName = "N. Petal Lane Mount", @City = "Laurel", @State ="NJ", @ZipCode = 08054;
-EXEC Create_Professional @Uid = "d31yjojki0", @Occupation = "Accountant", @StreetNumber = 32, @StreetName = "Grace St.", @City = "Riverview", @State ="FL", @ZipCode = 33569;
-EXEC Create_Professional @Uid = "qiobg221mc", @Occupation = "Mechanic", @StreetNumber = 4, @StreetName = "East Feathers Rd.", @City = "Paramus", @State ="NJ", @ZipCode = 07652;
-EXEC Create_Professional @Uid = "rulrtxj0bv", @Occupation = "Firefighter", @StreetNumber = 32, @StreetName = "Grand Dr.", @City = "Grayslake", @State ="IL", @ZipCode = 60030;
-EXEC Create_Professional @Uid = "hd2rivojrm", @Occupation = "Scientist", @StreetNumber = 735, @StreetName = "Liberty St.", @City = "Kaukauna", @State ="WI", @ZipCode = 54130;
-EXEC Create_Professional @Uid = "38grpr2e9y", @Occupation = "Manager", @StreetNumber = 46, @StreetName = "Gainsway St. Green Cove", @City = "Springs", @State ="FL", @ZipCode = 32043;
-EXEC Create_Professional @Uid = "ptyxla8t1u", @Occupation = "Programmer", @StreetNumber = 410, @StreetName = "N. Gregory St. Saint", @City = "Cloud", @State ="MN", @ZipCode = 56301;
-EXEC Create_Professional @Uid = "sbua4h62px", @Occupation = "Salesman", @StreetNumber = 761, @StreetName = "New Castle St.", @City = "Montgomery", @State ="AL", @ZipCode = 36109;
-EXEC Create_Professional @Uid = "m4zt8a66j2", @Occupation = "Archeologist", @StreetNumber = 314, @StreetName = "Fieldstone Street", @City = "Wheeling", @State ="WV", @ZipCode = 26003;
-EXEC Create_Professional @Uid = "ujcbn51kqh", @Occupation = "Manager", @StreetNumber = 94, @StreetName = "Woodland St. Redondo", @City = "Beach", @State ="CA", @ZipCode = 90278;
-EXEC Create_Professional @Uid = "w0hyjk3yfx", @Occupation = "Agronomist", @StreetNumber = 7336, @StreetName = "South National St.", @City = "Norcross", @State ="GA", @ZipCode = 30092;
-EXEC Create_Professional @Uid = "k5nlfoywb0", @Occupation = "Firefighter", @StreetNumber = 839, @StreetName = "Seacoast Lane", @City = "Tuscaloosa", @State ="AL", @ZipCode = 35405;
-EXEC Create_Professional @Uid = "vlx4mrmoq4", @Occupation = "Mechanic", @StreetNumber = 85, @StreetName = "Sycamore Ave. North", @City = "Kingstown", @State ="RI", @ZipCode = 02852;
-EXEC Create_Professional @Uid = "ci7uk6l572", @Occupation = "Chef", @StreetNumber = 879, @StreetName = "West Ridgewood Road", @City = "Huntersville", @State ="NC", @ZipCode = 28078;
-EXEC Create_Professional @Uid = "tvyr7re42v", @Occupation = "Engineer", @StreetNumber = 7216, @StreetName = "Sheffield Drive", @City = "Lithonia", @State ="GA", @ZipCode = 30038;
-EXEC Create_Professional @Uid = "miszt7zqvw", @Occupation = "Accountant", @StreetNumber = 577, @StreetName = "Mechanic Street", @City = "Sarasota", @State ="FL", @ZipCode = 34231;
-EXEC Create_Professional @Uid = "irlbwi1up4", @Occupation = "Singer", @StreetNumber = 8406, @StreetName = "Blue Spring Lane Iowa", @City = "City", @State ="IA", @ZipCode = 52240;
-EXEC Create_Professional @Uid = "systpy9jnt", @Occupation = "Hairdresser", @StreetNumber = 796, @StreetName = "NE. Sugar Road Benton", @City = "Harbor", @State ="MI", @ZipCode = 49022;
-EXEC Create_Professional @Uid = "i23mz0kccw", @Occupation = "Dancer", @StreetNumber = 865, @StreetName = "Greystone Ave. Manchester", @City = "Township", @State ="NJ", @ZipCode = 08759;
-EXEC Create_Professional @Uid = "3qwa5t3bqw", @Occupation = "Meteorologist", @StreetNumber = 974, @StreetName = "Hall Rd.", @City = "Ashburn", @State ="VA", @ZipCode = 20147;
-EXEC Create_Professional @Uid = "ln071i7wod", @Occupation = "Dancer", @StreetNumber = 411, @StreetName = "Front Drive", @City = "Tuckerton", @State ="NJ", @ZipCode = 08087;
-EXEC Create_Professional @Uid = "odxx0if76n", @Occupation = "Chef", @StreetNumber = 219, @StreetName = "E. Beechwood Dr. Great", @City = "Falls", @State ="MT", @ZipCode = 59404;
-EXEC Create_Professional @Uid = "f8ywcks9zx", @Occupation = "Social", @StreetNumber = 23, @StreetName = "West Oak Valley Street North", @City = "Kingstown", @State ="RI", @ZipCode = 02852;
-EXEC Create_Professional @Uid = "h0n85cn60n", @Occupation = "Architect", @StreetNumber = 9802, @StreetName = "Anchor Court", @City = "Memphis", @State ="TN", @ZipCode = 38106;
-EXEC Create_Professional @Uid = "1q13gwze7l", @Occupation = "Singer", @StreetNumber = 584, @StreetName = "Big Rock Cove St.", @City = "Englishtown", @State ="NJ", @ZipCode = 07726;
-EXEC Create_Professional @Uid = "z5iohr0h9j", @Occupation = "Social_Worker", @StreetNumber = 827, @StreetName = "Petal Drive", @City = "Lincoln", @State ="NE", @ZipCode = 68506;
-EXEC Create_Professional @Uid = "e7u3pm8n08", @Occupation = "Producer", @StreetNumber = 410, @StreetName = "N. Gregory St. Saint", @City = "Cloud", @State ="MN", @ZipCode = 56301;
-EXEC Create_Professional @Uid = "hxq1ahex8l", @Occupation = "Florist", @StreetNumber = 761, @StreetName = "New Castle St.", @City = "Montgomery", @State ="AL", @ZipCode = 36109;
-EXEC Create_Professional @Uid = "7r7sl42vhp", @Occupation = "Social", @StreetNumber = 314, @StreetName = "Fieldstone Street", @City = "Wheeling", @State ="WV", @ZipCode = 26003;
-EXEC Create_Professional @Uid = "78pf3abhg0", @Occupation = "Archeologist", @StreetNumber = 94, @StreetName = "Woodland St. Redondo", @City = "Beach", @State ="CA", @ZipCode = 90278;
-EXEC Create_Professional @Uid = "l4fym48ewq", @Occupation = "Florist", @StreetNumber = 7336, @StreetName = "South National St.", @City = "Norcross", @State ="GA", @ZipCode = 30092;
-EXEC Create_Professional @Uid = "fvodebwntu", @Occupation = "Chef", @StreetNumber = 839, @StreetName = "Seacoast Lane", @City = "Tuscaloosa", @State ="AL", @ZipCode = 35405;
-EXEC Create_Professional @Uid = "vuvjz0qo79", @Occupation = "Auditor", @StreetNumber = 85, @StreetName = "Sycamore Ave. North", @City = "Kingstown", @State ="RI", @ZipCode = 02852;
-EXEC Create_Professional @Uid = "eyv8qwy848", @Occupation = "Auditor", @StreetNumber = 879, @StreetName = "West Ridgewood Road", @City = "Huntersville", @State ="NC", @ZipCode = 28078;
-EXEC Create_Professional @Uid = "mnzyyp55ag", @Occupation = "Programmer", @StreetNumber = 7216, @StreetName = "Sheffield Drive", @City = "Lithonia", @State ="GA", @ZipCode = 30038;
-EXEC Create_Professional @Uid = "oewk5vfqsc", @Occupation = "Cook", @StreetNumber = 577, @StreetName = "Mechanic Street", @City = "Sarasota", @State ="FL", @ZipCode = 34231;
-EXEC Create_Professional @Uid = "j7gkyxp8dy", @Occupation = "Mathematician", @StreetNumber = 8406, @StreetName = "Blue Spring Lane Iowa", @City = "City", @State ="IA", @ZipCode = 52240;
-EXEC Create_Professional @Uid = "kwzd1t6dw7", @Occupation = "Jeweller", @StreetNumber = 796, @StreetName = "NE. Sugar Road Benton", @City = "Harbor", @State ="MI", @ZipCode = 49022;
-EXEC Create_Professional @Uid = "4wirrwoeje", @Occupation = "Astronomer", @StreetNumber = 865, @StreetName = "Greystone Ave. Manchester", @City = "Township", @State ="NJ", @ZipCode = 08759;
-EXEC Create_Professional @Uid = "8wtlh6ombx", @Occupation = "Agronomist", @StreetNumber = 974, @StreetName = "Hall Rd.", @City = "Ashburn", @State ="VA", @ZipCode = 20147;
-EXEC Create_Professional @Uid = "n6f7xo1jxh", @Occupation = "Biochemist", @StreetNumber = 411, @StreetName = "Front Drive", @City = "Tuckerton", @State ="NJ", @ZipCode = 08087;
-EXEC Create_Professional @Uid = "y0oz64mcag", @Occupation = "Insurer", @StreetNumber = 219, @StreetName = "E. Beechwood Dr. Great", @City = "Falls", @State ="MT", @ZipCode = 59404;
-EXEC Create_Professional @Uid = "dlhkptu0ks", @Occupation = "Insurer", @StreetNumber = 23, @StreetName = "West Oak Valley Street North", @City = "Kingstown", @State ="RI", @ZipCode = 02852;
-EXEC Create_Professional @Uid = "jlk9clxrzq", @Occupation = "Chemist", @StreetNumber = 9802, @StreetName = "Anchor Court", @City = "Memphis", @State ="TN", @ZipCode = 38106;
-EXEC Create_Professional @Uid = "u25t1ij9ul", @Occupation = "Meteorologist", @StreetNumber = 584, @StreetName = "Big Rock Cove St.", @City = "Englishtown", @State ="NJ", @ZipCode = 07726;
-EXEC Create_Professional @Uid = "qrwyyamhmf", @Occupation = "Engineer", @StreetNumber = 827, @StreetName = "Petal Drive", @City = "Lincoln", @State ="NE", @ZipCode = 68506;
+EXEC AddProfessional @FirebaseUid = "SVqVVvLxlZQinsSHruz3BgWCdSC2", @FirstName = "John", @LastName = "Doe", @Occupation = "Jeweller", @StreetNumber = 8937, @StreetName = "Livingston Lane", @City = "Tucker", @State ="GA", @ZipCode = 30084;
+EXEC AddProfessional @FirebaseUid = "ZNgGM0VJRnTMP9GtP7FazQwv0sK2", @FirstName = "Jane", @LastName = "Smith", @Occupation = "Florist", @StreetNumber = 7581, @StreetName = "South High Point Lane", @City = "Rockville", @State ="MD", @ZipCode = 20850;
+EXEC AddProfessional @FirebaseUid = "SgIXK7MTbfZo1Hzov5JVZLuet8d2", @FirstName = "Robert", @LastName = "Brown", @Occupation = "Teacher", @StreetNumber = 7825, @StreetName = "Longfellow Road", @City = "Dothan", @State ="AL", @ZipCode = 36301;
+EXEC AddProfessional @FirebaseUid = "v1AFoLxIqFhIqaFpal2MYWUvLl72", @FirstName = "Linda", @LastName = "Williams", @Occupation = "Baker", @StreetNumber = 9393, @StreetName = "Hall Lane", @City = "Burbank", @State ="IL", @ZipCode = 60459;
+EXEC AddProfessional @FirebaseUid = "aYRoLSM9GOUt85P8eR2A8U4DO0w1", @FirstName = "Michael", @LastName = "Davis", @Occupation = "Producer", @StreetNumber = 31, @StreetName = "S. Hickory Dr.", @City = "Simpsonville", @State ="SC", @ZipCode = 29680;
+/*
+EXEC GetProfessional @FirebaseUid = "SVqVVvLxlZQinsSHruz3BgWCdSC2";
+EXEC GetProfessionalTimeSlots @FirebaseUid = "SVqVVvLxlZQinsSHruz3BgWCdSC2";
+EXEC GetProfessionalAppointments @FirebaseUid = "SVqVVvLxlZQinsSHruz3BgWCdSC2";
+EXEC RemoveProfessional @FirebaseUid = "SVqVVvLxlZQinsSHruz3BgWCdSC2";
+EXEC AddProfessional @FirebaseUid = "SVqVVvLxlZQinsSHruz3BgWCdSC2", @FirstName = "John", @LastName = "Doe", @Occupation = "Jeweller", @StreetNumber = 8937, @StreetName = "Livingston Lane", @City = "Tucker", @State ="GA", @ZipCode = 30084;
+EXEC UpdateProfessional @FirebaseUid = "SVqVVvLxlZQinsSHruz3BgWCdSC2", @FirstName = "John", @LastName = "Smith", @Occupation = "Jeweller", @StreetNumber = 8937, @StreetName = "Livingston Lane", @City = "Tucker", @State ="GA", @ZipCode = 30084;
+EXEC GetProfessional @FirebaseUid = "SVqVVvLxlZQinsSHruz3BgWCdSC2";
+*/
+EXEC AddClient @FirebaseUid = "x45mZ9SUWoTUgRagvruOSrIemgI2", @FirstName = "James", @LastName = "Wilson";
+EXEC AddClient @FirebaseUid = "GDV7Ahs83HbyK9TpOd459REfQHz2", @FirstName = "Mary", @LastName = "Anderson";
+EXEC AddClient @FirebaseUid = "k0FPafEy7qfli4nDs0zbXb0FKXP2", @FirstName = "Richard", @LastName = "Thomas";
+EXEC AddClient @FirebaseUid = "m0PRmKMottO5OAV1KVQDUUlA4ga2", @FirstName = "Jennifer", @LastName = "Taylor";
+EXEC AddClient @FirebaseUid = "IYO0KWOwS7fy1IB9pHkywxrFPut2", @FirstName = "Joseph", @LastName = "Moore";
 
-EXEC Create_Client @Uid = 200;
-EXEC Create_Client @Uid = 201;
-EXEC Create_Client @Uid = 202;
-EXEC Create_Client @Uid = 203;
-EXEC Create_Client @Uid = 204;
-EXEC Create_Client @Uid = 205;
-EXEC Create_Client @Uid = 206;
-EXEC Create_Client @Uid = 207;
-EXEC Create_Client @Uid = 208;
-EXEC Create_Client @Uid = 209;
-EXEC Create_Client @Uid = 210;
-EXEC Create_Client @Uid = 211;
-EXEC Create_Client @Uid = 212;
-EXEC Create_Client @Uid = 213;
-EXEC Create_Client @Uid = 214;
-EXEC Create_Client @Uid = 215;
-EXEC Create_Client @Uid = 216;
-EXEC Create_Client @Uid = 217;
-EXEC Create_Client @Uid = 218;
-EXEC Create_Client @Uid = 219;
+EXEC AddClientFavorite @ClientFirebaseUid = "x45mZ9SUWoTUgRagvruOSrIemgI2",  @ProfessionalFirebaseUid = "SVqVVvLxlZQinsSHruz3BgWCdSC2";
+EXEC AddClientFavorite @ClientFirebaseUid = "x45mZ9SUWoTUgRagvruOSrIemgI2",  @ProfessionalFirebaseUid = "ZNgGM0VJRnTMP9GtP7FazQwv0sK2";
+EXEC AddClientFavorite @ClientFirebaseUid = "x45mZ9SUWoTUgRagvruOSrIemgI2",  @ProfessionalFirebaseUid = "SgIXK7MTbfZo1Hzov5JVZLuet8d2";
 
+EXEC AddTimeSlot @ProfessionalFirebaseUid = "SVqVVvLxlZQinsSHruz3BgWCdSC2", @StartTime='2021-05-23 08:00:00', @EndTime='2021-05-23 09:00:00';
+EXEC AddTimeSlot @ProfessionalFirebaseUid = "SVqVVvLxlZQinsSHruz3BgWCdSC2", @StartTime='2021-05-23 09:00:00', @EndTime='2021-05-23 10:00:00';
+EXEC AddTimeSlot @ProfessionalFirebaseUid = "SVqVVvLxlZQinsSHruz3BgWCdSC2", @StartTime='2021-05-23 10:00:00', @EndTime='2021-05-23 11:00:00';
+EXEC AddTimeSlot @ProfessionalFirebaseUid = "SVqVVvLxlZQinsSHruz3BgWCdSC2", @StartTime='2021-05-23 11:00:00', @EndTime='2021-05-23 12:00:00';
+EXEC AddTimeSlot @ProfessionalFirebaseUid = "SVqVVvLxlZQinsSHruz3BgWCdSC2", @StartTime='2021-05-23 12:00:00', @EndTime='2021-05-23 13:00:00';
+EXEC AddTimeSlot @ProfessionalFirebaseUid = "SVqVVvLxlZQinsSHruz3BgWCdSC2", @StartTime='2021-05-23 13:00:00', @EndTime='2021-05-23 14:00:00';
+EXEC AddTimeSlot @ProfessionalFirebaseUid = "SVqVVvLxlZQinsSHruz3BgWCdSC2", @StartTime='2021-05-23 14:00:00', @EndTime='2021-05-23 15:00:00';
+EXEC AddTimeSlot @ProfessionalFirebaseUid = "SVqVVvLxlZQinsSHruz3BgWCdSC2", @StartTime='2021-05-23 15:00:00', @EndTime='2021-05-23 16:00:00';
+EXEC AddTimeSlot @ProfessionalFirebaseUid = "SVqVVvLxlZQinsSHruz3BgWCdSC2", @StartTime='2021-05-23 16:00:00', @EndTime='2021-05-23 17:00:00';
+
+EXEC RemoveTimeSlot @TimeSlotId = 5;
+EXEC RemoveTimeSlot @TimeSlotId = 9;
+/*
+EXEC GetProfessionalTimeSlots  @FirebaseUid = "SVqVVvLxlZQinsSHruz3BgWCdSC2";
+*/
+/*
+EXEC AddAppointment @ClientFirebaseUid = "x45mZ9SUWoTUgRagvruOSrIemgI2", @TimeSlotId = 1, @Name = "Appointment 1", @Description = "Some descriptio will go here.";
+EXEC AddAppointment @ClientFirebaseUid = "GDV7Ahs83HbyK9TpOd459REfQHz2", @TimeSlotId = 2, @Name = "Appointment 2", @Description = "Some descriptio will go here.";
+EXEC AddAppointment @ClientFirebaseUid = "GDV7Ahs83HbyK9TpOd459REfQHz2", @TimeSlotId = 3, @Name = "Appointment 3", @Description = "Some descriptio will go here.";
+*/
+/*
+EXEC GetClient @FirebaseUid = "x45mZ9SUWoTUgRagvruOSrIemgI2";
+EXEC GetClientFavorites @FirebaseUid = "x45mZ9SUWoTUgRagvruOSrIemgI2";
+EXEC GetClientAppointments @FirebaseUid = "x45mZ9SUWoTUgRagvruOSrIemgI2";
+EXEC GetClientAppointments @FirebaseUid = "GDV7Ahs83HbyK9TpOd459REfQHz2";
+EXEC RemoveAppointment @TimeSlotId = 2;
+EXEC GetClientAppointments @FirebaseUid = "GDV7Ahs83HbyK9TpOd459REfQHz2";
+*/
+/*
+EXEC RemoveClientFavorite @ClientFirebaseUid = "x45mZ9SUWoTUgRagvruOSrIemgI2",  @ProfessionalFirebaseUid = "SgIXK7MTbfZo1Hzov5JVZLuet8d2";
+EXEC UpdateClient @FirebaseUid = "x45mZ9SUWoTUgRagvruOSrIemgI2", @FirstName = "NewName", @LastName = "Wilson";
+EXEC GetClient @FirebaseUid = "x45mZ9SUWoTUgRagvruOSrIemgI2";
+EXEC GetClientFavorites @FirebaseUid = "x45mZ9SUWoTUgRagvruOSrIemgI2";
+EXEC RemoveClient @FirebaseUid = "GDV7Ahs83HbyK9TpOd459REfQHz2";
+EXEC AddClient @FirebaseUid = "GDV7Ahs83HbyK9TpOd459REfQHz2", @FirstName = "Mary", @LastName = "Anderson";
+*/
+
+/*
 -- Test to make sure the tables were created
 SELECT * FROM Professional;
-SELECT * FROM ProfessionalAddress;
 SELECT * FROM TimeSlot;
 SELECT * FROM Client;
 SELECT * FROM ClientFavoriteProfessional;
@@ -252,3 +351,4 @@ SELECT * FROM Appointment;
 EXEC  Get_Professional_Appointments @Uid = 0;
 EXEC Get_Client_Favorites @Uid = 0;
 EXEC Get_Client_Appointments @Uid = 0;
+*/
