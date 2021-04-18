@@ -6,16 +6,16 @@ EXEC AddProfessional @FirebaseUid = "HpLykwD1aNfctE7jDP0HxGcBSOu1", @FirstName =
 EXEC AddProfessional @FirebaseUid = "BFve5ZJNoxVrtpSKcl5uHwYOKlG3", @FirstName = "Nicolas 2", @LastName = "Allen", @Occupation = "Producer", @StreetNumber = 31, @StreetName = "S. Hickory Dr.", @City = "Simpsonville", @State ="SC", @ZipCode = 29680;
 
 -- Clients
-EXEC AddClient @FirebaseUid = "usUnOnKhBSYA4x6lvKy4Q8UUxvE2", @FirstName = "Test", @LastName = "Client";
+EXEC AddClient @FirebaseUid = "jz8yheLfaFSw9DAYQaDXxgwTJNH3", @FirstName = "Test", @LastName = "Client";
 EXEC AddClient @FirebaseUid = "GDV7Ahs83HbyK9TpOd459REfQHz2", @FirstName = "Mary", @LastName = "Anderson";
 EXEC AddClient @FirebaseUid = "k0FPafEy7qfli4nDs0zbXb0FKXP2", @FirstName = "Richard", @LastName = "Thomas";
 EXEC AddClient @FirebaseUid = "m0PRmKMottO5OAV1KVQDUUlA4ga2", @FirstName = "Jennifer", @LastName = "Taylor";
 EXEC AddClient @FirebaseUid = "IYO0KWOwS7fy1IB9pHkywxrFPut2", @FirstName = "Joseph", @LastName = "Moore";
 
 -- Client Favorites
-EXEC AddClientFavorite @ClientFirebaseUid = "usUnOnKhBSYA4x6lvKy4Q8UUxvE2",  @ProfessionalFirebaseUid = "l8tAKH833FMXM0Wsv9U3yaEeAMI2";
-EXEC AddClientFavorite @ClientFirebaseUid = "usUnOnKhBSYA4x6lvKy4Q8UUxvE2",  @ProfessionalFirebaseUid = "SvAwDTs1uXZPO3ukDWLAteQgl9t2";
-EXEC AddClientFavorite @ClientFirebaseUid = "usUnOnKhBSYA4x6lvKy4Q8UUxvE2",  @ProfessionalFirebaseUid = "n3uLXBINyWUwjdVD4T1LE3rRCDd2";
+EXEC AddClientFavorite @ClientFirebaseUid = "jz8yheLfaFSw9DAYQaDXxgwTJNH3",  @ProfessionalFirebaseUid = "l8tAKH833FMXM0Wsv9U3yaEeAMI2";
+EXEC AddClientFavorite @ClientFirebaseUid = "jz8yheLfaFSw9DAYQaDXxgwTJNH3",  @ProfessionalFirebaseUid = "SvAwDTs1uXZPO3ukDWLAteQgl9t2";
+EXEC AddClientFavorite @ClientFirebaseUid = "jz8yheLfaFSw9DAYQaDXxgwTJNH3",  @ProfessionalFirebaseUid = "n3uLXBINyWUwjdVD4T1LE3rRCDd2";
 
 --TimeSlots
 -- Day 1
@@ -354,7 +354,7 @@ EXEC AddTimeSlot @ProfessionalFirebaseUid = "BFve5ZJNoxVrtpSKcl5uHwYOKlG3", @Sta
 EXEC AddTimeSlot @ProfessionalFirebaseUid = "BFve5ZJNoxVrtpSKcl5uHwYOKlG3", @StartTime='2021-05-27 16:00:00', @EndTime='2021-05-27 17:00:00';
 
 -- Appointments
-EXEC AddAppointment @ClientFirebaseUid = "usUnOnKhBSYA4x6lvKy4Q8UUxvE2", @TimeSlotId = 1, @Name = "Appointment 1", @Description = "Some description will go here.";
+EXEC AddAppointment @ClientFirebaseUid = "jz8yheLfaFSw9DAYQaDXxgwTJNH3", @TimeSlotId = 1, @Name = "Appointment 1", @Description = "Some description will go here.";
 EXEC AddAppointment @ClientFirebaseUid = "GDV7Ahs83HbyK9TpOd459REfQHz2", @TimeSlotId = 15, @Name = "Appointment 2", @Description = "Some description will go here.";
 EXEC AddAppointment @ClientFirebaseUid = "GDV7Ahs83HbyK9TpOd459REfQHz2", @TimeSlotId = 20, @Name = "Appointment 4", @Description = "Some description will go here.";
 EXEC AddAppointment @ClientFirebaseUid = "GDV7Ahs83HbyK9TpOd459REfQHz2", @TimeSlotId = 32, @Name = "Appointment 5", @Description = "Some description will go here.";
