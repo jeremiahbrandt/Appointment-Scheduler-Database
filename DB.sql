@@ -33,6 +33,7 @@ GO
 -- Delete existing stored procedures
 DROP PROC AddProfessional;
 DROP PROC GetProfessional;
+DROP PROC GetProfessionalByShareableCode;
 DROP PROC GetProfessionalTimeSlots;
 DROP PROC GetProfessionalAppointments;
 DROP PROC RemoveProfessional;
@@ -119,6 +120,7 @@ GO
 Professional stored procedures
 	AddProfessional
 	GetProfessional
+	GetProfessionalByShareableCode
 	GetProfessionalTimeSlots
 	GetProfessionalAppointments
 	RemoveProfessional
@@ -136,6 +138,13 @@ AS
 	SELECT FirebaseUid, FirstName, LastName, Occupation, ShareableCode, StreetNumber, StreetName, City, StateName AS State, ZipCode
 	FROM Professional
 	WHERE @FirebaseUid = FirebaseUid;
+GO
+
+CREATE PROC GetProfessionalByShareableCode @ShareableCode NVARCHAR(255)
+AS
+	SELECT FirebaseUid, FirstName, LastName, Occupation, ShareableCode, StreetNumber, StreetName, City, StateName AS State, ZipCode
+	FROM Professional
+	WHERE @ShareableCode = ShareableCode;
 GO
 
 CREATE PROC GetProfessionalTimeSlots @FirebaseUid NVARCHAR(255)
